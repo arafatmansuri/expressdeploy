@@ -1,0 +1,22 @@
+{
+  "name": "expressdeploy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -b",
+    "start": "node dist/server.js",
+    "dev": "tsx --watch server.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@types/express": "^5.0.6",
+    "express": "^5.2.1",
+    "tsc": "^2.0.4",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
