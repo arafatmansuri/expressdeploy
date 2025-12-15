@@ -1,0 +1,64 @@
+name: Deploy Express backend to EC2
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    name: Build and Deploy backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🧾 Check out repository code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Install dependencies and build TypeScript
+        run: |
+          npm ci
+          npm install typescript
+          tsc -b
+
+      - name: 📦 Prepare deployment package
+        run: |
+          mkdir deploy
+          cp -r dist package.json package-lock.json deploy/
+          cd deploy && tar -czf ../demo.tar.gz .
+
+      - name: 🚀 Upload to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ubuntu
+          key: ${{ secrets.PRIVATE_SSH_KEY }}
+          port: 22
+          source: "demo.tar.gz"
+          target: "~/"
+
+      - name: 🔧 Deploy on EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ubuntu
+          key: ${{ secrets.PRIVATE_SSH_KEY }}
+          port: 22
+          script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+            echo "🔄 Deploying shift board backend..."
+            rm -rf ~/demo
+            mkdir ~/demo
+            tar -xzf ~/demo.tar.gz -C ~/demo
+            cd ~/demo
+            echo "🧾 Creating .env file..."
+            echo "${{ secrets.ENV_FILE }}" > .env
+            npm ci --omit=dev
+            deactivate
+
+            echo "🚀 Restarting server with PM2..."
+            pm2 delete demo || true
+            pm2 start dist/server.js --name "demo"
+            pm2 save
